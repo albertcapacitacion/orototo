@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Discover considered gold jewelry and coins at Oro Toto. A fictional storefront demo.">
+  <title>Oro Toto — Gold You Can Trust</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#home" aria-label="Oro Toto home">
+        <img src="assets/logo.svg" alt="" width="42" height="42">
+        <span>ORO <b>TOTO</b></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
+        <a href="#home">Home</a><a href="#products">Products</a><a href="#about">About Us</a><a href="#contact">Contact</a>
+      </nav>
+      <button class="cart-trigger" type="button" aria-label="Open shopping cart">Cart <span class="cart-count" aria-live="polite">0</span><span class="cart-bag" aria-hidden="true">▱</span></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> A little more precious</p>
+        <h1 id="hero-title">Gold you<br>can <em>trust.</em></h1>
+        <p class="hero-description">Thoughtful gold, chosen for its beauty and the story it carries. Explore our curated collection of jewelry and coins.</p>
+        <a class="button button-dark" href="#products">Explore our gold <span aria-hidden="true">↗</span></a>
+        <p class="hero-note">A considered collection. A lasting impression.</p>
+      </div>
+      <div class="hero-art" role="img" aria-label="Gold necklace displayed against a sculptural cream backdrop">
+        <div class="art-sun"></div><div class="art-arch"></div>
+        <svg class="hero-necklace" viewBox="0 0 460 480" aria-hidden="true"><defs><linearGradient id="chain" x1="0" x2="1"><stop stop-color="#aa7227"/><stop offset=".48" stop-color="#f2cd78"/><stop offset="1" stop-color="#b98132"/></linearGradient></defs><path d="M75 80 C88 280 145 354 230 354 C315 354 372 280 385 80" fill="none" stroke="url(#chain)" stroke-width="5" stroke-dasharray="2 5" stroke-linecap="round"/><path d="M203 349 L230 400 L257 349 L230 326 Z" fill="#d4a64e" stroke="#f4d792" stroke-width="3"/><circle cx="230" cy="375" r="9" fill="#f6dc9f"/></svg>
+        <div class="hero-caption"><span>01 / 06</span><span>THE EVERYDAY HEIRLOOM</span></div>
+        <span class="hero-stamp">EST.<br>1988</span>
+      </div>
+      <span class="hero-side-label">GOOD THINGS, MADE TO LAST</span>
+    </section>
+
+    <section class="trust-strip" aria-label="Our commitments"><span>✳ Carefully selected</span><span>◆ Clear, honest pricing</span><span>✳ Personal service</span></section>
+
+    <section class="products section-wrap" id="products" aria-labelledby="products-title">
+      <div class="section-heading"><div><p class="eyebrow">The collection</p><h2 id="products-title">Made to <em>mean more.</em></h2></div><p>Pieces with a little weight to them—in every sense.</p></div>
+      <div class="product-grid" id="product-grid"></div>
+    </section>
+
+    <section class="about" id="about" aria-labelledby="about-title">
+      <div class="about-art"><div class="about-circle"><span>OT</span></div><p>REAL GOLD. REAL PEOPLE.</p></div>
+      <div class="about-copy"><p class="eyebrow">A good thing, honestly done</p><h2 id="about-title">A little more<br><em>meaningful.</em></h2><p>At Oro Toto, we believe gold should feel as good to choose as it does to wear. Our small, considered collection brings together enduring pieces with clear details and a human touch.</p><p>Every item in this demonstration collection is fictional. In a real shop, we’d be here to answer your questions, help you compare, and make sure you know exactly what you’re taking home.</p><a class="text-link" href="#contact">Get to know us <span aria-hidden="true">→</span></a></div>
+    </section>
+
+    <section class="contact section-wrap" id="contact" aria-labelledby="contact-title">
+      <div class="contact-intro"><p class="eyebrow">We’re all ears</p><h2 id="contact-title">Let’s talk<br><em>gold.</em></h2><p>Questions about a piece? Send us a note. This demo form shows how contact could work, but does not send messages.</p><div class="contact-detail"><span>VISIT</span><p>12 Golden Lane<br>New York, NY 10013</p></div><div class="contact-detail"><span>CALL</span><p>(212) 555-0188</p></div></div>
+      <form class="contact-form" id="contact-form" novalidate>
+        <label for="name">Your name</label><input id="name" name="name" autocomplete="name" required placeholder="Jane Smith">
+        <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="jane@example.com">
+        <label for="message">Your message</label><textarea id="message" name="message" rows="4" required placeholder="Tell us what’s on your mind…"></textarea>
+        <button class="button button-dark" type="submit">Send a note <span aria-hidden="true">↗</span></button>
+        <p class="form-feedback" id="form-feedback" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="footer-top"><a class="brand footer-brand" href="#home"><img src="assets/logo.svg" alt="" width="38" height="38"><span>ORO <b>TOTO</b></span></a><p>Gold you can trust.<br>People you can talk to.</p><nav aria-label="Footer navigation"><a href="#products">Products</a><a href="#about">Our story</a><a href="#contact">Contact</a></nav><div class="footer-address">12 Golden Lane<br>New York, NY 10013<br>(212) 555-0188</div></div><div class="footer-bottom"><span>© <span id="year"></span> Oro Toto. All rights reserved.</span><span>Fictional storefront demo · No real products for sale</span></div></footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog class="cart-dialog" id="cart-dialog" aria-labelledby="cart-title"><div class="cart-header"><div><p class="eyebrow">Your selection</p><h2 id="cart-title">The cart</h2></div><button class="dialog-close" type="button" aria-label="Close cart">×</button></div><div class="cart-items" id="cart-items"></div><div class="cart-footer"><p><span>Subtotal</span><strong id="cart-total">$0.00</strong></p><small>Demo only. No payment is collected.</small><button class="button button-dark cart-done" type="button">Continue browsing</button></div></dialog>
+</body>
+</html>
