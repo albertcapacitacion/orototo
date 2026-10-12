@@ -21,6 +21,21 @@ grid.innerHTML = products.map(product => `
     </div>
   </article>`).join('');
 
+const inventoryRows = document.querySelector('#inventory-rows');
+inventoryRows.innerHTML = products.map(product => `
+  <tr><th scope="row">${product.name}</th><td>${product.purity}</td><td>${money(product.price)}</td></tr>`).join('');
+document.querySelector('#inventory-summary').innerHTML = `<strong>${products.length}</strong><span>products in the collection</span>`;
+
+function syncPage(){
+  const pageId = ['reports', 'analyze-inventory'].includes(location.hash.slice(1)) ? location.hash.slice(1) : null;
+  document.querySelectorAll('.report-page').forEach(page => { page.hidden = page.id !== pageId; });
+  document.querySelectorAll('#main > section:not(.report-page)').forEach(section => { section.hidden = pageId !== null; });
+  document.querySelector('.site-footer').hidden = pageId !== null;
+  if(pageId) window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', syncPage);
+syncPage();
+
 const count = document.querySelector('.cart-count');
 const dialog = document.querySelector('#cart-dialog');
 const cartItems = document.querySelector('#cart-items');

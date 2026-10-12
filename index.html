@@ -19,13 +19,32 @@
       </a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
       <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
-        <a href="#home">Home</a><a href="#products">Products</a><a href="#about">About Us</a><a href="#contact">Contact</a>
+        <a href="#home">Home</a><a href="#products">Products</a><a href="#about">About Us</a><a href="#contact">Contact</a><a href="#reports">Reports</a>
       </nav>
       <button class="cart-trigger" type="button" aria-label="Open shopping cart">Cart <span class="cart-count" aria-live="polite">0</span><span class="cart-bag" aria-hidden="true">▱</span></button>
     </div>
   </header>
 
   <main id="main">
+    <section class="report-page section-wrap" id="reports" aria-labelledby="reports-title" hidden>
+      <a class="text-link report-back" href="#home">← Back to store</a>
+      <div class="section-heading"><div><p class="eyebrow">Insights</p><h1 id="reports-title">Reports</h1></div><p>Explore reports for your business.</p></div>
+      <div class="report-grid">
+        <a class="report-card" href="#analyze-inventory">
+          <span class="report-card-icon" aria-hidden="true">▤</span>
+          <span class="report-card-copy"><span class="eyebrow">Inventory</span><strong>Analyze Inventory</strong><span>Review the products in your collection.</span></span>
+          <span class="report-card-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="report-page section-wrap" id="analyze-inventory" aria-labelledby="inventory-title" hidden>
+      <a class="text-link report-back" href="#reports">← Back to Reports</a>
+      <div class="section-heading"><div><p class="eyebrow">Reports / Inventory</p><h1 id="inventory-title">Analyze Inventory</h1></div><p>A view of the products in your collection.</p></div>
+      <div class="inventory-summary" id="inventory-summary" aria-live="polite"></div>
+      <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">Product</th><th scope="col">Details</th><th scope="col">Price</th></tr></thead><tbody id="inventory-rows"></tbody></table></div>
+    </section>
+
     <section class="hero" id="home" aria-labelledby="hero-title">
       <div class="hero-copy">
         <p class="eyebrow"><span></span> A little more precious</p>
