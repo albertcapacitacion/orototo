@@ -41,8 +41,8 @@
     <section class="report-page section-wrap" id="analyze-inventory" aria-labelledby="inventory-title" hidden>
       <a class="text-link report-back" href="#reports">← Back to Reports</a>
       <div class="section-heading"><div><p class="eyebrow">Reports / Inventory</p><h1 id="inventory-title">Analyze Inventory</h1></div><p>A view of the products in your collection.</p></div>
-      <div class="inventory-summary" id="inventory-summary" aria-live="polite"></div>
-      <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">Product</th><th scope="col">Details</th><th scope="col">Price</th></tr></thead><tbody id="inventory-rows"></tbody></table></div>
+      <div class="inventory-tools"><div class="inventory-summary" id="inventory-summary" aria-live="polite"></div><div class="inventory-upload"><button class="button button-dark" id="inventory-upload-button" type="button">Update Inventory <span aria-hidden="true">↗</span></button><input id="inventory-file" type="file" accept=".csv,text/csv" hidden><p id="inventory-upload-status" role="status" aria-live="polite"></p></div></div>
+      <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Purity</th><th scope="col">Weight (g)</th><th scope="col">Cost</th><th scope="col">Price</th><th scope="col">Stock</th></tr></thead><tbody id="inventory-rows"></tbody></table></div>
     </section>
 
     <section class="hero" id="home" aria-labelledby="hero-title">

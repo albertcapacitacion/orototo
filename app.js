@@ -9,22 +9,84 @@ const products = [
 
 const money = amount => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount);
 const grid = document.querySelector('#product-grid');
+const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+let inventory = products.map((product,index)=>({id:String(index+1),name:product.name,category:'',purity:product.purity,weight:null,cost:null,price:product.price,stock:null}));
 let cart = [];
 let toastTimer;
 
-grid.innerHTML = products.map(product => `
+function renderProducts(){
+  grid.innerHTML = products.map(product => `
   <article class="product-card">
-    <div class="product-visual"><img src="${product.image}" alt="${product.name} in polished gold" loading="lazy"><span class="product-tag">${product.tag}</span></div>
-    <div class="product-info"><div class="product-title-row"><h3>${product.name}</h3><span class="product-price">${money(product.price)}</span></div>
-      <p class="product-purity">${product.purity}</p>
-      <button class="add-button" type="button" data-add="${product.id}" aria-label="Add ${product.name} to cart">Add to cart <span aria-hidden="true">+</span></button>
+    <div class="product-visual"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)} in polished gold" loading="lazy"><span class="product-tag">${escapeHtml(product.tag)}</span></div>
+    <div class="product-info"><div class="product-title-row"><h3>${escapeHtml(product.name)}</h3><span class="product-price">${money(product.price)}</span></div>
+      <p class="product-purity">${escapeHtml(product.purity)}</p>
+      <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="Add ${escapeHtml(product.name)} to cart">Add to cart <span aria-hidden="true">+</span></button>
     </div>
   </article>`).join('');
+}
 
 const inventoryRows = document.querySelector('#inventory-rows');
-inventoryRows.innerHTML = products.map(product => `
-  <tr><th scope="row">${product.name}</th><td>${product.purity}</td><td>${money(product.price)}</td></tr>`).join('');
-document.querySelector('#inventory-summary').innerHTML = `<strong>${products.length}</strong><span>products in the collection</span>`;
+function renderInventory(){
+  inventoryRows.innerHTML = inventory.map(product => `<tr><td>${escapeHtml(product.id)}</td><th scope="row">${escapeHtml(product.name)}</th><td>${escapeHtml(product.category || '')}</td><td>${escapeHtml(product.purity)}</td><td>${product.weight == null ? '—' : escapeHtml(product.weight)}</td><td>${product.cost == null ? '—' : money(product.cost)}</td><td>${money(product.price)}</td><td>${product.stock == null ? '—' : escapeHtml(product.stock)}</td></tr>`).join('');
+  document.querySelector('#inventory-summary').innerHTML = `<strong>${inventory.length}</strong><span>products in the collection</span>`;
+}
+renderProducts();
+renderInventory();
+
+function parseCsv(text){
+  const rows=[];let row=[],field='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const char=text[i];
+    if(quoted){if(char==='"'&&text[i+1]==='"'){field+='"';i++;}else if(char==='"')quoted=false;else field+=char;}
+    else if(char==='"'){if(field)throw new Error('Unexpected quote in CSV.');quoted=true;}
+    else if(char===','){row.push(field);field='';}
+    else if(char==='\n'||char==='\r'){
+      if(char==='\r'&&text[i+1]==='\n')i++;
+      row.push(field);field='';
+      if(row.some(value=>value.trim()!==''))rows.push(row);
+      row=[];
+    }else field+=char;
+  }
+  if(quoted)throw new Error('The CSV has an unclosed quoted field.');
+  row.push(field);if(row.some(value=>value.trim()!==''))rows.push(row);
+  if(rows.length<2)throw new Error('The CSV must include a header and at least one product.');
+  const headers=rows.shift().map(value=>value.trim().replace(/^\uFEFF/,''));
+  if(new Set(headers).size!==headers.length)throw new Error('The CSV contains duplicate column headers.');
+  const required=['ID','Product','Category','Purity','Weight_g','Cost_USD','Price_USD','Stock'];
+  const positions=new Map(headers.map((header,index)=>[header,index]));
+  const missing=required.filter(header=>!positions.has(header));
+  if(missing.length)throw new Error(`Missing required columns: ${missing.join(', ')}.`);
+  const ids=new Set();
+  return rows.map((values,index)=>{
+    if(values.length!==headers.length)throw new Error(`Row ${index+2} has a different number of columns than the header.`);
+    const get=header=>values[positions.get(header)].trim();
+    const id=get('ID'),name=get('Product'),category=get('Category'),purity=get('Purity');
+    if(!id||!name||!category||!purity)throw new Error(`Row ${index+2} needs ID, Product, Category, and Purity.`);
+    if(ids.has(id))throw new Error(`Duplicate product ID "${id}".`);ids.add(id);
+    const number=(header,{integer=false,positive=false}={})=>{
+      const raw=get(header),value=Number(raw);
+      if(raw===''||!Number.isFinite(value)||value<0||(positive&&value===0)||(integer&&!Number.isInteger(value)))throw new Error(`Row ${index+2} has an invalid ${header} value.`);
+      return value;
+    };
+    return {id,name,category,purity,weight:number('Weight_g',{positive:true}),cost:number('Cost_USD'),price:number('Price_USD'),stock:number('Stock',{integer:true})};
+  });
+}
+
+const inventoryFile=document.querySelector('#inventory-file');
+const inventoryStatus=document.querySelector('#inventory-upload-status');
+document.querySelector('#inventory-upload-button').addEventListener('click',()=>inventoryFile.click());
+inventoryFile.addEventListener('change',async()=>{
+  const [file]=inventoryFile.files;if(!file)return;
+  inventoryStatus.textContent='';
+  try{
+    const imported=parseCsv(await file.text());
+    inventory.splice(0,inventory.length,...imported);
+    renderInventory();
+    inventoryStatus.textContent=`Inventory report updated with ${inventory.length} products for this session.`;
+    showToast('Inventory updated');
+  }catch(error){inventoryStatus.textContent=`Inventory was not changed. ${error.message}`;}
+  inventoryFile.value='';
+});
 
 function syncPage(){
   const pageId = ['reports', 'analyze-inventory'].includes(location.hash.slice(1)) ? location.hash.slice(1) : null;
@@ -44,7 +106,7 @@ const total = document.querySelector('#cart-total');
 function renderCart(){
   count.textContent = cart.length;
   if(!cart.length){cartItems.innerHTML='<p class="empty-cart">Your cart is waiting for something lovely.</p>';}
-  else {cartItems.innerHTML=cart.map((item,index)=>`<div class="cart-row"><img src="${item.image}" alt=""><div><strong>${item.name}</strong><small>${item.purity}</small><button class="remove-item" type="button" data-remove="${index}" aria-label="Remove ${item.name} from cart">Remove</button></div><span class="cart-row-price">${money(item.price)}</span></div>`).join('');}
+  else {cartItems.innerHTML=cart.map((item,index)=>`<div class="cart-row"><img src="${escapeHtml(item.image)}" alt=""><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.purity)}</small><button class="remove-item" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.name)} from cart">Remove</button></div><span class="cart-row-price">${money(item.price)}</span></div>`).join('');}
   total.textContent=money(cart.reduce((sum,item)=>sum+item.price,0));
 }
 
