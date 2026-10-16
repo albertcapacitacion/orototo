@@ -102,12 +102,19 @@ const count = document.querySelector('.cart-count');
 const dialog = document.querySelector('#cart-dialog');
 const cartItems = document.querySelector('#cart-items');
 const total = document.querySelector('#cart-total');
+const orderForm = document.querySelector('#order-form');
+const orderDetails = document.querySelector('#order-details');
+const orderSubtotal = document.querySelector('#order-subtotal');
+const cartFeedback = document.querySelector('#cart-form-feedback');
+const cartSubmit = orderForm.querySelector('[type="submit"]');
+let submittingOrder = false;
 
 function renderCart(){
   count.textContent = cart.length;
   if(!cart.length){cartItems.innerHTML='<p class="empty-cart">Your cart is waiting for something lovely.</p>';}
   else {cartItems.innerHTML=cart.map((item,index)=>`<div class="cart-row"><img src="${escapeHtml(item.image)}" alt=""><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.purity)}</small><button class="remove-item" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.name)} from cart">Remove</button></div><span class="cart-row-price">${money(item.price)}</span></div>`).join('');}
   total.textContent=money(cart.reduce((sum,item)=>sum+item.price,0));
+  cartSubmit.disabled = cart.length === 0 || submittingOrder;
 }
 
 function showToast(message){
@@ -124,6 +131,28 @@ document.querySelector('.dialog-close').addEventListener('click',()=>dialog.clos
 document.querySelector('.cart-done').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
 cartItems.addEventListener('click',event=>{const button=event.target.closest('[data-remove]');if(!button)return;const [item]=cart.splice(Number(button.dataset.remove),1);renderCart();showToast(`${item.name} removed from your cart`);});
+
+orderForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!orderForm.reportValidity()||!cart.length||submittingOrder)return;
+  orderDetails.value=cart.map(item=>`${item.name} — ${item.purity} — ${money(item.price)}`).join('\n');
+  orderSubtotal.value=money(cart.reduce((sum,item)=>sum+item.price,0));
+  submittingOrder=true;
+  cartSubmit.disabled=true;
+  cartFeedback.textContent='Sending your request…';
+  try{
+    const response=await fetch(orderForm.action,{method:'POST',body:new FormData(orderForm),headers:{Accept:'application/json'}});
+    if(!response.ok)throw new Error('The request could not be sent. Please try again.');
+    cart.splice(0,cart.length);
+    renderCart();
+    cartFeedback.textContent='Thanks! Your order request was sent.';
+  }catch(error){
+    cartFeedback.textContent=`${error.message} Check your connection and try again.`;
+  }finally{
+    submittingOrder=false;
+    cartSubmit.disabled=cart.length===0;
+  }
+});
 
 const menuToggle=document.querySelector('.menu-toggle');
 const nav=document.querySelector('#primary-nav');
