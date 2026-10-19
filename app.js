@@ -10,7 +10,8 @@ const products = [
 const money = amount => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount);
 const grid = document.querySelector('#product-grid');
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-let inventory = products.map((product,index)=>({id:String(index+1),name:product.name,category:'',purity:product.purity,weight:null,cost:null,price:product.price,stock:null}));
+let inventory = [];
+let inventoryLoaded = false;
 let cart = [];
 let toastTimer;
 
@@ -26,12 +27,57 @@ function renderProducts(){
 }
 
 const inventoryRows = document.querySelector('#inventory-rows');
+const inventoryDashboard=document.querySelector('#inventory-dashboard');
+const inventoryCategory=document.querySelector('#inventory-category');
+const inventorySearch=document.querySelector('#inventory-search');
+const inventoryStockFilter=document.querySelector('#inventory-stock-filter');
+const lowStockThreshold=4;
+const productStatus=product=>product.stock===0?'Out of stock':product.stock<=lowStockThreshold?'Low stock':'In stock';
+const stockValue=product=>product.cost*product.stock;
+function renderBars(title,metric,formatter,items){
+  const grouped=new Map();
+  items.forEach(product=>{const key=product.category||'Uncategorized';grouped.set(key,(grouped.get(key)||0)+metric(product));});
+  const entries=[...grouped.entries()].sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...entries.map(([,value])=>value),1);
+  return `<section class="inventory-chart"><h2>${title}</h2><div class="inventory-bars" aria-hidden="true">${entries.map(([category,value])=>`<div class="inventory-bar-row"><span>${escapeHtml(category)}</span><div class="inventory-bar-track"><i style="width:${Math.max(value>0?2:0,value/max*100)}%"></i></div><strong>${formatter(value)}</strong></div>`).join('')}</div><ul class="sr-only">${entries.map(([category,value])=>`<li>${escapeHtml(category)}: ${formatter(value)}</li>`).join('')||'<li>No matching inventory.</li>'}</ul></section>`;
+}
 function renderInventory(){
-  inventoryRows.innerHTML = inventory.map(product => `<tr><td>${escapeHtml(product.id)}</td><th scope="row">${escapeHtml(product.name)}</th><td>${escapeHtml(product.category || '')}</td><td>${escapeHtml(product.purity)}</td><td>${product.weight == null ? '—' : escapeHtml(product.weight)}</td><td>${product.cost == null ? '—' : money(product.cost)}</td><td>${money(product.price)}</td><td>${product.stock == null ? '—' : escapeHtml(product.stock)}</td></tr>`).join('');
-  document.querySelector('#inventory-summary').innerHTML = `<strong>${inventory.length}</strong><span>products in the collection</span>`;
+  inventoryDashboard.hidden=!inventoryLoaded;
+  if(!inventoryLoaded)return;
+  const search=inventorySearch.value.trim().toLowerCase();
+  const category=inventoryCategory.value;
+  const stockFilter=inventoryStockFilter.value;
+  const filtered=inventory.filter(product=>{
+    if(category&&product.category!==category)return false;
+    if(search&&!`${product.name} ${product.id}`.toLowerCase().includes(search))return false;
+    if(stockFilter==='out'&&product.stock!==0)return false;
+    if(stockFilter==='low'&&product.stock>lowStockThreshold)return false;
+    if(stockFilter==='available'&&product.stock<=lowStockThreshold)return false;
+    return true;
+  });
+  const units=filtered.reduce((sum,product)=>sum+product.stock,0);
+  const costValue=filtered.reduce((sum,product)=>sum+stockValue(product),0);
+  const retailValue=filtered.reduce((sum,product)=>sum+product.price*product.stock,0);
+  const grossProfit=filtered.reduce((sum,product)=>sum+(product.price-product.cost)*product.stock,0);
+  const outOfStock=filtered.filter(product=>product.stock===0).length;
+  const lowStock=filtered.filter(product=>product.stock<=lowStockThreshold).length;
+  const highestCostProduct=filtered.reduce((highest,product)=>!highest||stockValue(product)>stockValue(highest)?product:highest,null);
+  const nearOutProducts=filtered.filter(product=>product.stock<5).sort((a,b)=>a.stock-b.stock||a.name.localeCompare(b.name));
+  document.querySelector('#inventory-summary').innerHTML=`<strong>${inventory.length}</strong><span>products loaded · ${inventory.reduce((sum,item)=>sum+item.stock,0).toLocaleString('en-US')} units on hand</span>`;
+  document.querySelector('#inventory-highlights').innerHTML=`<article class="inventory-highlight"><span>Highest inventory cost</span>${highestCostProduct?`<strong>${escapeHtml(highestCostProduct.name)}</strong><b>${money(stockValue(highestCostProduct))}</b><small>${highestCostProduct.stock.toLocaleString('en-US')} units × ${money(highestCostProduct.cost)} unit cost</small>`:'<strong>No matching products</strong>'}</article><article class="inventory-highlight"><span>Potential retail value</span><strong>${money(retailValue)}</strong><small>At listed prices, before expenses</small></article><article class="inventory-highlight inventory-near-out"><span>Products under 5 units <b>${nearOutProducts.length}</b></span>${nearOutProducts.length?`<ul>${nearOutProducts.map(product=>`<li><span>${escapeHtml(product.name)}</span><strong>${product.stock} ${product.stock===1?'unit':'units'}</strong></li>`).join('')}</ul>`:'<strong>None</strong>'}</article>`;
+  document.querySelector('#inventory-alerts').innerHTML=`<div class="inventory-alert ${outOfStock?'inventory-alert-critical':''}"><strong>${outOfStock}</strong><span>out of stock</span></div><div class="inventory-alert ${lowStock?'inventory-alert-warning':''}"><strong>${lowStock}</strong><span>under 5 units</span></div><p>Alerts reflect the current filters. Near out of stock means fewer than 5 units.</p>`;
+  document.querySelector('#inventory-kpis').innerHTML=[['Products',filtered.length],['Units on hand',units.toLocaleString('en-US')],['Inventory at cost',money(costValue)],['Potential gross profit',money(grossProfit)]].map(([label,value])=>`<article class="inventory-kpi"><span>${label}</span><strong>${value}</strong>${label==='Potential gross profit'?'<small>At listed price, before expenses</small>':''}</article>`).join('');
+  const categories=[...new Set(inventory.map(product=>product.category))].sort((a,b)=>a.localeCompare(b));
+  const selectedCategory=inventoryCategory.value;
+  inventoryCategory.innerHTML='<option value="">All categories</option>'+categories.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+  inventoryCategory.value=selectedCategory;
+  document.querySelector('#inventory-charts').innerHTML=renderBars('Units on hand by category',product=>product.stock,value=>value.toLocaleString('en-US'),filtered)+renderBars('Inventory cost by category',stockValue,value=>money(value),filtered);
+  inventoryRows.innerHTML=filtered.map(product=>`<tr><td>${escapeHtml(product.id)}</td><th scope="row">${escapeHtml(product.name)}</th><td>${escapeHtml(product.category)}</td><td>${escapeHtml(product.weight)}</td><td>${money(product.cost)}</td><td>${money(product.price)}</td><td>${product.stock.toLocaleString('en-US')}</td><td>${money(stockValue(product))}</td><td><span class="stock-badge ${product.stock===0?'is-out':product.stock<=lowStockThreshold?'is-low':''}">${productStatus(product)}</span></td></tr>`).join('');
+  if(!filtered.length)inventoryRows.innerHTML='<tr><td colspan="9" class="inventory-empty">No products match these filters.</td></tr>';
+  document.querySelector('#inventory-result-count').textContent=`${filtered.length} of ${inventory.length} products`;
+  document.querySelector('#inventory-kpis').setAttribute('aria-label','Inventory key indicators');
 }
 renderProducts();
-renderInventory();
 
 function parseCsv(text){
   const rows=[];let row=[],field='',quoted=false;
@@ -81,12 +127,18 @@ inventoryFile.addEventListener('change',async()=>{
   try{
     const imported=parseCsv(await file.text());
     inventory.splice(0,inventory.length,...imported);
+    inventoryLoaded=true;
+    inventorySearch.value='';inventoryCategory.value='';inventoryStockFilter.value='';
     renderInventory();
     inventoryStatus.textContent=`Inventory report updated with ${inventory.length} products for this session.`;
     showToast('Inventory updated');
   }catch(error){inventoryStatus.textContent=`Inventory was not changed. ${error.message}`;}
   inventoryFile.value='';
 });
+inventorySearch.addEventListener('input',renderInventory);
+inventoryCategory.addEventListener('change',renderInventory);
+inventoryStockFilter.addEventListener('change',renderInventory);
+document.querySelector('#inventory-reset').addEventListener('click',()=>{inventorySearch.value='';inventoryCategory.value='';inventoryStockFilter.value='';renderInventory();});
 
 function syncPage(){
   const pageId = ['reports', 'analyze-inventory'].includes(location.hash.slice(1)) ? location.hash.slice(1) : null;

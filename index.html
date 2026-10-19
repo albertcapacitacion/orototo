@@ -41,8 +41,21 @@
     <section class="report-page section-wrap" id="analyze-inventory" aria-labelledby="inventory-title" hidden>
       <a class="text-link report-back" href="#reports">← Back to Reports</a>
       <div class="section-heading"><div><p class="eyebrow">Reports / Inventory</p><h1 id="inventory-title">Analyze Inventory</h1></div><p>A view of the products in your collection.</p></div>
-      <div class="inventory-tools"><div class="inventory-summary" id="inventory-summary" aria-live="polite"></div><div class="inventory-upload"><button class="button button-dark" id="inventory-upload-button" type="button">Update Inventory <span aria-hidden="true">↗</span></button><input id="inventory-file" type="file" accept=".csv,text/csv" hidden><p id="inventory-upload-status" role="status" aria-live="polite"></p></div></div>
-      <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Purity</th><th scope="col">Weight (g)</th><th scope="col">Cost</th><th scope="col">Price</th><th scope="col">Stock</th></tr></thead><tbody id="inventory-rows"></tbody></table></div>
+      <div class="inventory-tools"><div class="inventory-summary" id="inventory-summary" aria-live="polite">Upload an inventory CSV to view the dashboard.</div><div class="inventory-upload"><button class="button button-dark" id="inventory-upload-button" type="button">Update Inventory <span aria-hidden="true">↗</span></button><input id="inventory-file" type="file" accept=".csv,text/csv" hidden><p id="inventory-upload-status" role="status" aria-live="polite"></p></div></div>
+      <div class="inventory-dashboard" id="inventory-dashboard" hidden>
+        <section class="inventory-highlights" id="inventory-highlights" aria-label="Inventory highlights"></section>
+        <section class="inventory-alerts" id="inventory-alerts" aria-live="polite" aria-label="Inventory status"></section>
+        <section class="inventory-kpis" id="inventory-kpis" aria-label="Inventory key indicators"></section>
+        <div class="inventory-filters" aria-label="Filter inventory">
+          <label>Search products<input id="inventory-search" type="search" placeholder="Name or ID"></label>
+          <label>Category<select id="inventory-category"><option value="">All categories</option></select></label>
+          <label>Stock status<select id="inventory-stock-filter"><option value="">All stock</option><option value="out">Out of stock</option><option value="low">Near out of stock (&lt;5)</option><option value="available">Available (5+)</option></select></label>
+          <button class="button inventory-reset" id="inventory-reset" type="button">Reset filters</button>
+        </div>
+        <div class="inventory-charts" id="inventory-charts"></div>
+        <div class="inventory-table-heading"><h2>Products</h2><span id="inventory-result-count" aria-live="polite"></span></div>
+        <div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Weight (g)</th><th scope="col">Unit cost</th><th scope="col">Price</th><th scope="col">Stock</th><th scope="col">Stock value</th><th scope="col">Status</th></tr></thead><tbody id="inventory-rows"></tbody></table></div>
+      </div>
     </section>
 
     <section class="hero" id="home" aria-labelledby="hero-title">
