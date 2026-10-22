@@ -1,11 +1,4 @@
-const products = [
-  {id:'solitaire',name:'Solitaire Ring',purity:'18K yellow gold · Size 7',price:680,image:'assets/solitaire.svg',tag:'A classic'},
-  {id:'coin',name:'Heritage Coin',purity:'24K gold · 1 oz',price:2480,image:'assets/coin.svg',tag:'24 karat'},
-  {id:'chain',name:'Fine Link Chain',purity:'18K yellow gold · 18 in',price:920,image:'assets/chain.svg',tag:'Everyday'},
-  {id:'bangle',name:'Sculpted Bangle',purity:'18K yellow gold · 7 in',price:1150,image:'assets/bangle.svg',tag:'Small batch'},
-  {id:'hoops',name:'Classic Hoops',purity:'14K yellow gold · 25 mm',price:460,image:'assets/hoops.svg',tag:'A favorite'},
-  {id:'pendant',name:'Sunburst Pendant',purity:'18K yellow gold · 16 in',price:740,image:'assets/pendant.svg',tag:'New arrival'}
-];
+let products = [];
 
 const money = amount => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount);
 const grid = document.querySelector('#product-grid');
@@ -16,15 +9,32 @@ let cart = [];
 let toastTimer;
 
 function renderProducts(){
+  if (!products.length) { grid.innerHTML = '<p role="status">No products are currently available.</p>'; return; }
   grid.innerHTML = products.map(product => `
   <article class="product-card">
-    <div class="product-visual"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)} in polished gold" loading="lazy"><span class="product-tag">${escapeHtml(product.tag)}</span></div>
-    <div class="product-info"><div class="product-title-row"><h3>${escapeHtml(product.name)}</h3><span class="product-price">${money(product.price)}</span></div>
-      <p class="product-purity">${escapeHtml(product.purity)}</p>
+    <div class="product-visual">${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)} in polished gold" loading="lazy">` : '<span class="product-image-missing">Image unavailable</span>'}${product.tag ? `<span class="product-tag">${escapeHtml(product.tag)}</span>` : ''}</div>
+    <div class="product-info"><div class="product-title-row"><h3>${escapeHtml(product.name)}</h3><span class="product-price">${money(product.price_cents / 100)}</span></div>
+      <p class="product-purity">${escapeHtml(product.purity || '')}</p>
       <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="Add ${escapeHtml(product.name)} to cart">Add to cart <span aria-hidden="true">+</span></button>
     </div>
   </article>`).join('');
 }
+
+async function loadProducts() {
+  grid.innerHTML = '<p role="status">Loading products…</p>';
+  try {
+    const response = await fetch('/api/products', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error('Catalog unavailable');
+    const data = await response.json();
+    products = data.products.map(product => ({ ...product, id: String(product.id),
+      image: /^assets\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:png|jpg|webp|svg)$/.test(product.image_path || '') ? product.image_path : null,
+    }));
+    renderProducts();
+  } catch {
+    grid.innerHTML = '<p role="alert">Products could not be loaded. <button type="button" data-retry-products>Try again</button></p>';
+  }
+}
+loadProducts();
 
 const inventoryRows = document.querySelector('#inventory-rows');
 const inventoryDashboard=document.querySelector('#inventory-dashboard');
@@ -77,8 +87,6 @@ function renderInventory(){
   document.querySelector('#inventory-result-count').textContent=`${filtered.length} of ${inventory.length} products`;
   document.querySelector('#inventory-kpis').setAttribute('aria-label','Inventory key indicators');
 }
-renderProducts();
-
 function parseCsv(text){
   const rows=[];let row=[],field='',quoted=false;
   for(let i=0;i<text.length;i++){
@@ -160,12 +168,15 @@ const orderSubtotal = document.querySelector('#order-subtotal');
 const cartFeedback = document.querySelector('#cart-form-feedback');
 const cartSubmit = orderForm.querySelector('[type="submit"]');
 let submittingOrder = false;
+let orderRequestKey = null;
+let orderRequestFingerprint = null;
+let savedOrder = null;
 
 function renderCart(){
   count.textContent = cart.length;
   if(!cart.length){cartItems.innerHTML='<p class="empty-cart">Your cart is waiting for something lovely.</p>';}
-  else {cartItems.innerHTML=cart.map((item,index)=>`<div class="cart-row"><img src="${escapeHtml(item.image)}" alt=""><div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.purity)}</small><button class="remove-item" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.name)} from cart">Remove</button></div><span class="cart-row-price">${money(item.price)}</span></div>`).join('');}
-  total.textContent=money(cart.reduce((sum,item)=>sum+item.price,0));
+  else {cartItems.innerHTML=cart.map((item,index)=>`<div class="cart-row">${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : '<span></span>'}<div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.purity || '')}</small><button class="remove-item" type="button" data-remove="${index}" aria-label="Remove ${escapeHtml(item.name)} from cart">Remove</button></div><span class="cart-row-price">${money(item.price_cents / 100)}</span></div>`).join('');}
+  total.textContent=money(cart.reduce((sum,item)=>sum+item.price_cents,0) / 100);
   cartSubmit.disabled = cart.length === 0 || submittingOrder;
 }
 
@@ -175,33 +186,86 @@ function showToast(message){
 }
 
 grid.addEventListener('click',event=>{
+  if (event.target.closest('[data-retry-products]')) { loadProducts(); return; }
+  if (submittingOrder || savedOrder) return;
   const button=event.target.closest('[data-add]');if(!button)return;
-  const product=products.find(item=>item.id===button.dataset.add);cart.push(product);renderCart();showToast(`${product.name} added to your cart`);
+  const product=products.find(item=>item.id===button.dataset.add);if(!product)return;cart.push(product);renderCart();showToast(`${product.name} added to your cart`);
 });
 document.querySelector('.cart-trigger').addEventListener('click',()=>dialog.showModal());
 document.querySelector('.dialog-close').addEventListener('click',()=>dialog.close());
 document.querySelector('.cart-done').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
-cartItems.addEventListener('click',event=>{const button=event.target.closest('[data-remove]');if(!button)return;const [item]=cart.splice(Number(button.dataset.remove),1);renderCart();showToast(`${item.name} removed from your cart`);});
+cartItems.addEventListener('click',event=>{if(submittingOrder||savedOrder)return;const button=event.target.closest('[data-remove]');if(!button)return;const [item]=cart.splice(Number(button.dataset.remove),1);renderCart();showToast(`${item.name} removed from your cart`);});
+
+function lockOrderControls(locked) {
+  document.querySelectorAll('[data-add], [data-remove], #order-name, #order-email').forEach(control=>{control.disabled=locked;});
+}
 
 orderForm.addEventListener('submit',async event=>{
   event.preventDefault();
   if(!orderForm.reportValidity()||!cart.length||submittingOrder)return;
-  orderDetails.value=cart.map(item=>`${item.name} — ${item.purity} — ${money(item.price)}`).join('\n');
-  orderSubtotal.value=money(cart.reduce((sum,item)=>sum+item.price,0));
+  const quantities = new Map();
+  for (const item of cart) {
+    const id = Number(item.id);
+    const line = quantities.get(id) || { product_id: id, quantity: 0, expected_unit_price_cents: item.price_cents };
+    line.quantity++;
+    quantities.set(id, line);
+  }
+  const intent = {
+    customer_name: document.querySelector('#order-name').value.trim(),
+    customer_email: document.querySelector('#order-email').value.trim(),
+    items: [...quantities.values()].sort((a, b) => a.product_id - b.product_id),
+  };
+  const fingerprint = JSON.stringify(intent);
+  if (fingerprint !== orderRequestFingerprint) {
+    orderRequestKey = crypto.randomUUID();
+    orderRequestFingerprint = fingerprint;
+  }
   submittingOrder=true;
+  lockOrderControls(true);
   cartSubmit.disabled=true;
-  cartFeedback.textContent='Sending your request…';
+  cartFeedback.textContent=savedOrder?'Retrying email notification…':'Saving your order…';
   try{
-    const response=await fetch(orderForm.action,{method:'POST',body:new FormData(orderForm),headers:{Accept:'application/json'}});
-    if(!response.ok)throw new Error('The request could not be sent. Please try again.');
+    if(!savedOrder){
+      const response=await fetch('/api/orders',{method:'POST',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        ...intent,request_key:orderRequestKey,
+      })});
+      const data=await response.json();
+      if(response.status===409 && data.code==='PRICE_CHANGED'){
+        for(const price of data.prices){
+          for(const item of [...products,...cart]){
+            if(Number(item.id)===price.product_id)item.price_cents=price.unit_price_cents;
+          }
+        }
+        renderProducts();renderCart();
+        cartFeedback.textContent='Prices changed. Your cart now shows the latest prices. Review the total and submit again to confirm. No order was saved.';
+        return;
+      }
+      if(!response.ok)throw new Error(data.error||'The order could not be saved. Please try again.');
+      savedOrder=data.order;
+    }
+    orderDetails.value=savedOrder.items.map(item=>`${item.product_name} × ${item.quantity} — ${money(item.unit_price_cents/100)} each`).join('\n');
+    orderSubtotal.value=money(savedOrder.subtotal_cents/100);
+    const notification=new FormData();
+    notification.set('name',savedOrder.customer_name);
+    notification.set('email',savedOrder.customer_email);
+    notification.set('order_id',String(savedOrder.id));
+    notification.set('order',orderDetails.value);
+    notification.set('subtotal',orderSubtotal.value);
+    const emailResponse=await fetch(orderForm.action,{method:'POST',body:notification,signal:AbortSignal.timeout(15000),headers:{Accept:'application/json'}});
+    if(!emailResponse.ok)throw new Error('Email notification could not be confirmed.');
+    const orderId=savedOrder.id;
     cart.splice(0,cart.length);
+    savedOrder=null;orderRequestKey=null;orderRequestFingerprint=null;
+    orderForm.reset();
     renderCart();
-    cartFeedback.textContent='Thanks! Your order request was sent.';
+    cartFeedback.textContent=`Thanks! Order #${orderId} was saved and your notification was sent.`;
   }catch(error){
-    cartFeedback.textContent=`${error.message} Check your connection and try again.`;
+    cartFeedback.textContent=savedOrder?`Order #${savedOrder.id} is saved. Email notification was not confirmed. Use Retry notification; it will reuse this order.`:`${error.message} Your cart has been kept. Please try again.`;
   }finally{
     submittingOrder=false;
+    lockOrderControls(Boolean(savedOrder));
+    cartSubmit.textContent=savedOrder?'Retry notification':'Submit order request ↗';
     cartSubmit.disabled=cart.length===0;
   }
 });

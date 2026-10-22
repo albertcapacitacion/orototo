@@ -50,3 +50,21 @@ Chronological notes from the project chats and work completed so far. Each entry
 - Added top-level highlights for the highest-cost product, total potential retail value, and every product with fewer than five units, including zero-stock items.
 - Near out of stock is defined as fewer than five units; zero stock is also called out separately as out of stock. Purity remains part of the import schema but is omitted from business indicators.
 - The dashboard is styled for mobile screens. A Playwright browser check with a synthetic four-product CSV confirmed the top highlights, near-out-of-stock filter, product search, and reset behavior. At a 390 px viewport there was no horizontal overflow, and the browser console had no errors.
+
+## 2026-10-22 — Connect the local catalog and order database
+
+- Kept the existing Node/HTML/CSS/JS application and added a Web Request/Response API with an isolated SQLite adapter. Sites deployment is deferred; a D1 adapter and hosted runtime verification are still required.
+- After explicit approval, backed up SQLite, generated four demo product photos, assigned relative image paths, and made A1–A4 visible. Prices and other product data were preserved.
+- Order saves use a transaction, database prices, historical item snapshots, and a unique request key so network retries do not insert duplicate orders.
+- Kept Formspree after the database save. Browser testing showed a failed notification can be retried without another order insert. Database and notification success are reported separately; uncertain email retries can still duplicate an email.
+- Restricted live reload to frontend source files, preventing database writes from interrupting checkout. Runtime databases and backup/test files are Git-ignored and are excluded from public-file serving.
+- Seven API tests passed, including an injected item-insert failure proving full rollback. Playwright used an isolated DB and mocked Formspree to verify successful checkout, notification retry, preserved cart after save failure, all four loaded images, and mobile layout.
+- Windows sandbox browser/network isolation required launching both the QA browser and a loopback-only QA server outside the sandbox. This avoided mistaking connectivity restrictions for an application defect.
+
+## 2026-10-22 — Fix first-run setup and checkout review findings
+
+- Added an explicit Node first-run initializer that reuses the existing schema and seed SQL. It reserves a new database filename exclusively and refuses to overwrite an existing file. Fresh-install creation, preparation, and refusal to overwrite were verified in an isolated installation.
+- An input-event reset could create duplicate orders after a successful save whose response was lost. Retry keys now follow trimmed customer details and a sorted, aggregated cart, so whitespace edits and add/remove actions that restore the same order retain its key.
+- Orders now include the displayed unit prices. The server checks those against current DB prices inside the transaction, rejects stale quotes without inserting records, and returns the prices for review. The frontend updates the cart total and requires a second submission.
+- Eleven automated tests passed. Playwright reproduced a lost response after a real save, retried after whitespace edits and a restored cart, confirmed stale-price review, and verified Formspree notification retry. Browser checks used a separate fresh installation and mocked Formspree; the working database was not modified.
+- Fixed the port-80 Host-header check: browsers omit the default HTTP port, so the allowlist now accepts portless localhost/127.0.0.1 only when configured for port 80. In-memory handler checks verify accepted hosts and continued rejection of unrelated hosts and wrong ports without opening the database.

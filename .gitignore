@@ -1,0 +1,5 @@
+.playwright-cli/
+.local/
+database/*.sqlite
+database/*.sqlite-*
+output/

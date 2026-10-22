@@ -1,12 +1,14 @@
 import { createServer } from 'node:http';
 import { watch } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
-import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handleApi } from './api.mjs';
+import { openStore } from './database/local.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 5173);
+const store = openStore(process.env.OROTOTO_DB || path.join(root, 'database/orototo.sqlite'));
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -28,16 +30,53 @@ const publicFiles = new Set([
   'assets/logo.svg',
   'assets/pendant.svg',
   'assets/solitaire.svg',
+  'assets/products/a1-chain.png',
+  'assets/products/a2-ring.png',
+  'assets/products/a3-coin.png',
+  'assets/products/a4-pendant.png',
 ]);
 const clients = new Set();
+const allowedHosts = new Set([
+  `localhost:${port}`, `127.0.0.1:${port}`,
+  ...(port === 80 ? ['localhost', '127.0.0.1'] : []),
+]);
 
 const server = createServer(async (request, response) => {
+  if (!allowedHosts.has(request.headers.host)) {
+    response.writeHead(403).end('Host not allowed');
+    return;
+  }
+  const pathname = new URL(request.url, 'http://localhost').pathname;
+  if (pathname.startsWith('/api/')) {
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of request) {
+        size += chunk.length;
+        if (size > 16384) {
+          response.writeHead(413, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Request too large.' }));
+          return;
+        }
+        chunks.push(chunk);
+      }
+      const body = Buffer.concat(chunks);
+      const apiResponse = await handleApi(new Request(`http://${request.headers.host}${request.url}`, {
+        method: request.method,
+        headers: request.headers,
+        ...(!['GET', 'HEAD'].includes(request.method) ? { body } : {}),
+      }), store);
+      response.writeHead(apiResponse.status, Object.fromEntries(apiResponse.headers));
+      response.end(Buffer.from(await apiResponse.arrayBuffer()));
+    } catch (error) {
+      console.error('API request failed:', error.message);
+      if (!response.headersSent) response.writeHead(500, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'Request could not be completed.' }));
+    }
+    return;
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' }).end('Method not allowed');
     return;
   }
-
-  const pathname = new URL(request.url, 'http://localhost').pathname;
 
   if (pathname === '/__reload') {
     response.writeHead(200, {
@@ -88,7 +127,7 @@ const server = createServer(async (request, response) => {
 
 let reloadTimer;
 const watcher = watch(root, { recursive: true }, (_event, filename) => {
-  if (filename && String(filename).startsWith('.')) return;
+    if (!filename || !['index.html', 'style.css', 'app.js'].includes(String(filename))) return;
   clearTimeout(reloadTimer);
   reloadTimer = setTimeout(() => {
     for (const client of clients) client.write('data: reload\n\n');
@@ -97,6 +136,7 @@ const watcher = watch(root, { recursive: true }, (_event, filename) => {
 
 server.on('error', (error) => {
   watcher.close();
+  store.close();
   if (error.code === 'EADDRINUSE') {
     console.error(`Port ${port} is already in use. Stop the other server or set PORT to use a different port.`);
   } else {
@@ -105,22 +145,16 @@ server.on('error', (error) => {
   process.exitCode = 1;
 });
 
-server.listen(port, '0.0.0.0', () => {
+server.requestTimeout = 15000;
+server.listen(port, '127.0.0.1', () => {
   console.log(`Website server: http://localhost:${port}`);
-  for (const addresses of Object.values(networkInterfaces())) {
-    for (const address of addresses || []) {
-      if (address.family === 'IPv4' && !address.internal) {
-        console.log(`Home network:  http://${address.address}:${port}`);
-      }
-    }
-  }
   console.log('Hot reload is enabled. Press Ctrl+C to stop.');
 });
 
 function stop() {
   watcher.close();
   for (const client of clients) client.end();
-  server.close(() => process.exit(0));
+  server.close(() => { store.close(); process.exit(0); });
 }
 
 process.on('SIGINT', stop);
