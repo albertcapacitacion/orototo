@@ -75,7 +75,7 @@ node database/prepare-local.mjs --confirm-images-and-visibility
 node server.mjs
 ```
 
-The first command creates a new sample database and refuses to overwrite an existing file. The second makes a backup, assigns the supplied images, and makes the four sample products visible. **It changes the sample database**; skip both setup commands when using an existing installation unless you intend those maintenance changes. See the [database guide](database/README.md) for details.
+The first command creates a new sample database and refuses to overwrite an existing file. The second makes a backup, assigns the supplied images, and makes the four sample products visible. **It changes the sample database**; skip both setup commands when using an existing installation unless you intend those maintenance changes.
 
 Open **[http://localhost:5173](http://localhost:5173)**. Stop the server with `Ctrl+C`.
 
@@ -103,7 +103,7 @@ node server.mjs
 3. Enter a name and email, then choose **Submit order request**.
 4. Read the confirmation: saving the order and sending its email notification are separate steps.
 
-**Submitting writes an order to the configured database and can send a real email.** Before trying checkout in your own copy, replace the Formspree endpoint in the cart form in `index.html` with your own endpoint, or use the [isolated browser tests](tests/README.md), which mock email delivery. The contact form elsewhere on the page is demonstration-only.
+**Submitting writes an order to the configured database and can send a real email.** Before trying checkout in your own copy, replace the Formspree endpoint in the cart form in `index.html` with your own endpoint. The contact form elsewhere on the page is demonstration-only.
 
 The cart and notification retry controls live in the open tab. Refreshing loses that state, while saved orders remain in the database. Retrying uncertain email delivery can produce duplicate notifications for the same order.
 
@@ -132,7 +132,7 @@ Start with a small change and build from there:
 - **Your style:** adjust colors, spacing, and typography in `style.css`.
 - **Your visuals:** replace the logo, product art, and photos in `assets/`.
 - **Your interactions:** explore the cart, navigation, and CSV dashboard in `app.js`.
-- **Your catalog:** read the [database guide](database/README.md) before making backed-up, intentional product changes.
+- **Your catalog:** back up the database before making intentional product changes.
 - **Your notifications:** configure your own Formspree endpoint in `index.html`.
 
 For example, ask Codex: “Explain how this page works,” “Help me adapt the branding to my business,” or “Plan a new feature before changing the code.” Review each change and try it locally as you learn.
@@ -168,7 +168,7 @@ For the separate **Cloudflare Workers** target, after configuring your own resou
 npm run build:cloudflare
 ```
 
-Then follow the [hosted deployment guide](sites/orototo-demo/README.md) for database initialization and deployment. The Cloudflare initial migration creates the tables and four sample products; apply it only to a new, empty database. Cloudflare's [Vite plugin guide](https://developers.cloudflare.com/workers/vite-plugin/) and [D1 setup guide](https://developers.cloudflare.com/d1/get-started/) explain the underlying hosting tools.
+The Cloudflare initial migration creates the tables and four sample products; apply it only to a new, empty database. Cloudflare's [Vite plugin guide](https://developers.cloudflare.com/workers/vite-plugin/) and [D1 setup guide](https://developers.cloudflare.com/d1/get-started/) explain the underlying hosting tools.
 
 **A static host alone cannot run the current catalog and order API.** Other hosting services need the Node backend or an adapted API. The supplied local server binds to `127.0.0.1` and accepts localhost hosts, so use a reverse proxy that forwards a permitted localhost `Host` header; platforms requiring direct public-port binding need a server adaptation.
 
@@ -201,7 +201,7 @@ npm test
 
 The local suite covers API/database behavior and browser flows, including checkout retries, price changes, mobile layout, and CSV reports. It uses separate synthetic databases and intercepts email requests. Hosted D1 has a separate test suite.
 
-Read the [test guide](tests/README.md), [database guide](database/README.md), and [hosted deployment guide](sites/orototo-demo/README.md) for setup details and limits. The existing [project experiences](experiences.md) record useful lessons from building the MVP.
+The [project experiences](experiences.md) record useful lessons from building the MVP.
 
 ## License
 
